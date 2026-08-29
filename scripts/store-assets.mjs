@@ -8,7 +8,7 @@
 //
 // Needs `chromium` on PATH. Run: node scripts/store-assets.mjs
 
-import { spawn, execFileSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -238,18 +238,9 @@ for (const [name, w, h, scale] of [
   console.log(`${name}.png`)
 }
 
-// The site's hero is the season-picker shot with the AniList header cropped off, so it
-// reads as a clean page edge under the hero gradient.
-try {
-  execFileSync('magick', [
-    resolve(OUT, 'screenshot-3-seasons.png'),
-    '-crop', '1280x715+0+85', '+repage',
-    resolve(EXT, 'docs', 'hero.png'),
-  ])
-  console.log('hero.png')
-} catch {
-  console.log('hero.png skipped (ImageMagick `magick` not found)')
-}
+// docs/hero.png is deliberately not generated here — it is a real screenshot taken by
+// hand on a signed-in account, which shows an airing show mid-season in a way a fresh
+// headless profile cannot.
 
 chrome.kill()
 console.log(`\nassets in ${OUT}`)
