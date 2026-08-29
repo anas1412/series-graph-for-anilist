@@ -8,7 +8,7 @@
 //
 // Needs `chromium` on PATH. Run: node scripts/store-assets.mjs
 
-import { spawn } from 'node:child_process'
+import { spawn, execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -31,8 +31,9 @@ const SHOTS = [
     dark: false,
   },
   {
+    // Bleach has sixteen TMDB seasons — the best look at the season picker.
     name: 'screenshot-3-seasons',
-    url: 'https://anilist.co/anime/145064/Jujutsu-Kaisen-2nd-Season/',
+    url: 'https://anilist.co/anime/269/BLEACH/',
     dark: true,
   },
   {
@@ -235,6 +236,19 @@ for (const [name, w, h, scale] of [
   const { result } = await tab.send('Page.captureScreenshot', { format: 'png' })
   writeFileSync(resolve(OUT, `${name}.png`), Buffer.from(result.data, 'base64'))
   console.log(`${name}.png`)
+}
+
+// The site's hero is the season-picker shot with the AniList header cropped off, so it
+// reads as a clean page edge under the hero gradient.
+try {
+  execFileSync('magick', [
+    resolve(OUT, 'screenshot-3-seasons.png'),
+    '-crop', '1280x715+0+85', '+repage',
+    resolve(EXT, 'docs', 'hero.png'),
+  ])
+  console.log('hero.png')
+} catch {
+  console.log('hero.png skipped (ImageMagick `magick` not found)')
 }
 
 chrome.kill()

@@ -52,13 +52,30 @@ function score(season, { episodes, start }) {
   return points
 }
 
+// True when the entry's start date puts it nowhere near this season's broadcast run.
+// Only decidable when we have both a start date and a season with real dates on it —
+// otherwise we cannot judge, and the caller should go on trusting the mapping.
+function contradicts(season, start) {
+  const aired = airedRange(season)
+  if (!start || !aired) return false
+  if (start >= aired.from && start <= aired.to) return false
+  return Math.abs(Date.parse(aired.from) - Date.parse(start)) / DAY > 120
+}
+
 // Returns the season number, or null when there is no honest answer.
 export function pickSeason(seasons, { mappedSeason, episodes, start }) {
   if (!seasons.length) return null
 
   // Start from the mapping's own answer, so a tie leaves it in place and only
   // positive evidence for another season moves us off it.
-  const prior = seasons.find((s) => s.season === mappedSeason)
+  //
+  // Unless the dates say it is wrong, in which case it is worse than having no answer
+  // at all — its +3 would otherwise win by default and look deliberate. Fribb maps all
+  // four parts of BLEACH: Thousand-Year Blood War to TMDB Bleach season 2, but TMDB's
+  // Bleach ends in March 2012 and does not contain TYBW at all, so every one of those
+  // pages was charting 2005 episodes under a 2026 anime.
+  const named = seasons.find((s) => s.season === mappedSeason)
+  const prior = named && !contradicts(named, start) ? named : undefined
   let best = prior ?? null
   let bestScore = prior ? score(prior, { episodes, start }) + 3 : -1
 

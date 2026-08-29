@@ -126,6 +126,19 @@ const kemono = await ask(99624)
 check('Kemono Friends 2 (2019, 12 ep) does not get season 1\'s 2017 chart', !kemono.ok,
   `got ok=${kemono.ok} season=${kemono.season}`)
 
+//    A prior the dates actively contradict is worse than no prior: Fribb maps all four
+//    parts of BLEACH: Thousand-Year Blood War to TMDB Bleach season 2, but that show
+//    ends in March 2012 and has no TYBW in it, so each of these was charting 2005.
+for (const [id, label] of [
+  [116674, 'BLEACH: TYBW part 1 (2022)'],
+  [159322, 'BLEACH: TYBW part 2 (2023)'],
+  [169755, 'BLEACH: TYBW part 3 (2024)'],
+  [185874, 'BLEACH: TYBW part 4 (2026)'],
+]) {
+  const r = await ask(id)
+  check(`${label} does not get 2005 Bleach's chart`, !r.ok, `got ok=${r.ok} season=${r.season}`)
+}
+
 // 8. a failed AniList lookup must not be cached — caching it would disable season
 //    disambiguation and the movie guard for a full 24 hours after one blip
 store.clear()
