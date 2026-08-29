@@ -3,6 +3,8 @@
 A Chrome extension that adds a per-episode rating chart to AniList anime pages, using
 data from [Series Graph](https://seriesgraph.com).
 
+**[anas1412.github.io/series-graph-for-anilist](https://anas1412.github.io/series-graph-for-anilist/)** · [Download latest](https://github.com/anas1412/series-graph-for-anilist/releases/latest/download/episode-ratings-for-anilist.zip)
+
 The panel sits at the top of the Overview column, above Relations, and follows
 AniList's light / dark / contrast theme.
 
