@@ -1,0 +1,9 @@
+# Build output — attached to GitHub releases instead
+dist/
+
+# Regenerate with: node test/fetch-fixtures.mjs
+# Not committed: it is a dump of Series Graph's data, and the preview page does not
+# need it in version control to be useful.
+test/fixtures.json
+
+node_modules/

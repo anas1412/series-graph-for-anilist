@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Series Graph for AniList — preview</title>
+<link rel="stylesheet" href="../src/styles.css">
+<style>
+  /* AniList's own theme variables, copied verbatim from anilist.co so the panel is
+     previewed against the real palette rather than an approximation. */
+  :root {
+    --color-background: 237,241,245;
+    --color-background-100: 251,251,251;
+    --color-background-200: 237,241,245;
+    --color-background-300: 221,230,238;
+    --color-background-400: 201,215,227;
+    --color-foreground: 250,250,250;
+    --color-text: 92,114,138;
+    --color-text-light: 122,133,143;
+    --color-blue: 61,180,242;
+    --color-white: 255,255,255;
+    --color-shadow: 49,54,68;
+  }
+  body.site-theme-dark {
+    --color-background: 11,22,34;
+    --color-background-100: 21,31,46;
+    --color-background-200: 11,22,34;
+    --color-background-300: 30,42,56;
+    --color-background-400: 81,97,112;
+    --color-foreground: 21,31,46;
+    --color-text: 159,173,189;
+    --color-text-light: 114,138,161;
+  }
+  body.site-theme-contrast {
+    --color-background: 229,235,241;
+    --color-background-100: 251,251,251;
+    --color-background-200: 229,235,241;
+    --color-background-300: 173,192,210;
+    --color-background-400: 139,160,178;
+    --color-foreground: 251,251,251;
+    --color-text: 38,52,63;
+    --color-text-light: 64,78,92;
+    --color-blue: 18,172,253;
+  }
+
+  body {
+    margin: 0;
+    padding: 24px 0 80px;
+    background: rgb(var(--color-background));
+    font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  /* AniList's overview column is 792px wide at a 1280px viewport. */
+  .overview { width: 792px; margin: 0 auto; }
+  .bar { width: 792px; margin: 0 auto 24px; display: flex; gap: 8px; align-items: center; }
+  .bar button {
+    font: 500 12px Roboto, sans-serif; padding: 5px 12px; border: 0; border-radius: 4px;
+    background: rgb(var(--color-foreground)); color: rgb(var(--color-text)); cursor: pointer;
+  }
+  .bar button.on { background: rgb(var(--color-blue)); color: #fff; }
+  .bar span { font: 12px Roboto, sans-serif; color: rgb(var(--color-text-light)); margin-left: auto; }
+  .case { width: 792px; margin: 0 auto; font: 500 12px Roboto, sans-serif;
+          color: rgb(var(--color-text-light)); padding: 28px 0 8px; }
+  /* Stand-in for AniList's description block, so spacing above the panel is realistic. */
+  .description-wrap h2 { margin: 0 0 10px; font: 500 14px Roboto, sans-serif; color: rgb(var(--color-text)); }
+  .description-wrap p {
+    margin: 0 0 30px; padding: 16px; border-radius: 4px; font: 14px/1.5 Roboto, sans-serif;
+    background: rgb(var(--color-foreground)); color: rgb(var(--color-text));
+  }
+</style>
+</head>
+<body class="site-theme-dark">
+
+<div class="bar">
+  <button data-theme="">Light</button>
+  <button data-theme="site-theme-dark" class="on">Dark</button>
+  <button data-theme="site-theme-contrast">Contrast</button>
+  <span id="status">loading fixtures…</span>
+</div>
+
+<script src="../src/chart.js"></script>
+<script>
+document.querySelectorAll('.bar button').forEach((b) => {
+  b.addEventListener('click', () => {
+    document.body.className = b.dataset.theme
+    document.querySelectorAll('.bar button').forEach((o) => o.classList.toggle('on', o === b))
+    window.dispatchEvent(new Event('resize')) // nudge the ResizeObserver
+  })
+})
+
+fetch('./fixtures.json')
+  .then((r) => r.json())
+  .then((fixtures) => {
+    const status = document.getElementById('status')
+    const total = fixtures.reduce((n, f) => n + f.seasons.reduce((m, s) => m + s.episodes.length, 0), 0)
+    status.textContent = fixtures.length + ' shows · ' + total + ' episodes'
+
+    for (const fixture of fixtures) {
+      const caseLabel = document.createElement('div')
+      caseLabel.className = 'case'
+      caseLabel.textContent = fixture.label
+      document.body.appendChild(caseLabel)
+
+      const overview = document.createElement('div')
+      overview.className = 'overview'
+      overview.innerHTML =
+        '<div class="description-wrap"><h2>Description</h2><p>Stand-in for AniList\'s description block.</p></div>'
+      document.body.appendChild(overview)
+
+      // fetch-fixtures.mjs already ran the service worker's resolution, so this is
+      // the exact payload buildPanel() receives in the browser.
+      overview.appendChild(buildPanel(fixture))
+    }
+
+    // Error state, so it gets eyes on it too.
+    const caseLabel = document.createElement('div')
+    caseLabel.className = 'case'
+    caseLabel.textContent = 'Error state'
+    document.body.appendChild(caseLabel)
+    const overview = document.createElement('div')
+    overview.className = 'overview'
+    overview.appendChild(buildMessage("Couldn't reach Series Graph. Failed to fetch"))
+    document.body.appendChild(overview)
+  })
+  .catch((err) => {
+    document.getElementById('status').textContent = 'fixtures failed: ' + err.message
+  })
+</script>
+</body>
+</html>

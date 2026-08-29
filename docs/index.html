@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Episode Ratings for AniList</title>
+<meta name="description" content="A Chrome extension that adds a per-episode rating chart to AniList anime pages.">
+<meta property="og:title" content="Episode Ratings for AniList">
+<meta property="og:description" content="See which episodes are the good ones, right on the AniList page.">
+<meta property="og:type" content="website">
+<link rel="icon" href="../icons/icon-128.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b1622;
+    --surface: #151f2e;
+    --surface-2: #1e2a38;
+    --line: #2b3d52;
+    --text: #9fadbd;
+    --bright: #edf1f5;
+    --dim: #728aa1;
+    --blue: #3db4f2;
+    --green: #6abe54;
+    --deep: #186a3b;
+    --yellow: #f4d03f;
+    --orange: #f0913c;
+    --red: #e03e3e;
+    --radius: 6px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 400 16px/1.65 Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--blue); }
+
+  .wrap { width: min(920px, 100% - 40px); margin: 0 auto; }
+
+  /* ---------- hero ---------- */
+
+  header {
+    position: relative;
+    padding: 72px 0 56px;
+    background:
+      radial-gradient(90% 120% at 15% -10%, rgba(61, 180, 242, 0.14) 0%, transparent 55%),
+      linear-gradient(180deg, #14263a 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+
+  .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+  .brand img { width: 40px; height: 40px; border-radius: 9px; }
+  .brand span { font-size: 13px; font-weight: 500; color: var(--dim); letter-spacing: .3px; }
+
+  h1 {
+    margin: 0 0 14px;
+    font-size: clamp(30px, 5.2vw, 46px);
+    font-weight: 700;
+    line-height: 1.12;
+    letter-spacing: -0.8px;
+    color: var(--bright);
+  }
+
+  .tagline { margin: 0 0 34px; font-size: clamp(16px, 2.2vw, 19px); max-width: 46ch; }
+  .tagline b { color: var(--bright); font-weight: 500; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 13px 22px; border-radius: var(--radius);
+    font-size: 15px; font-weight: 500; text-decoration: none;
+    border: 1px solid transparent; transition: background .15s, border-color .15s;
+  }
+  .btn-main { background: var(--blue); color: #06121c; }
+  .btn-main:hover { background: #5cc3f7; }
+  .btn-ghost { border-color: var(--line); color: var(--text); }
+  .btn-ghost:hover { border-color: var(--dim); color: var(--bright); }
+  .btn svg { flex: 0 0 auto; }
+
+  .meta { margin: 16px 0 0; font-size: 13px; color: var(--dim); }
+  .meta code { color: var(--text); }
+
+  /* ---------- shot ---------- */
+
+  .shot { margin: -26px 0 0; padding: 0 0 64px; }
+  .shot img {
+    display: block; width: 100%; height: auto;
+    border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .75);
+  }
+  .caption { margin: 14px 0 0; font-size: 13px; color: var(--dim); text-align: center; }
+
+  /* ---------- sections ---------- */
+
+  section { padding: 0 0 64px; }
+  h2 {
+    margin: 0 0 8px; font-size: 13px; font-weight: 700;
+    letter-spacing: 1.4px; text-transform: uppercase; color: var(--dim);
+  }
+  h3 { margin: 0 0 20px; font-size: clamp(22px, 3.4vw, 27px); font-weight: 500; color: var(--bright); letter-spacing: -.3px; }
+
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .feature { padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+  .feature b { display: block; margin-bottom: 5px; color: var(--bright); font-weight: 500; }
+  .feature p { margin: 0; font-size: 14px; line-height: 1.55; }
+
+  /* ---------- steps ---------- */
+
+  ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+  ol.steps > li {
+    counter-increment: step;
+    position: relative;
+    padding: 0 0 26px 52px;
+    border-left: 1px solid var(--line);
+    margin-left: 15px;
+  }
+  ol.steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: -15px; top: -2px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--surface-2); border: 1px solid var(--line);
+    color: var(--bright); font-size: 13px; font-weight: 500;
+    display: grid; place-items: center;
+  }
+  ol.steps b { color: var(--bright); font-weight: 500; }
+  ol.steps p { margin: 5px 0 0; font-size: 14.5px; }
+
+  kbd {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    font: 500 13px/1.5 Roboto, sans-serif; color: var(--bright);
+  }
+  code {
+    padding: 2px 6px; border-radius: 4px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px; color: var(--bright);
+  }
+  pre {
+    margin: 0; padding: 16px 18px; overflow-x: auto;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  }
+  pre code { padding: 0; background: none; border: 0; font-size: 13px; line-height: 1.7; color: var(--text); }
+
+  .note {
+    margin-top: 22px; padding: 14px 18px;
+    background: rgba(61, 180, 242, .07);
+    border: 1px solid rgba(61, 180, 242, .25);
+    border-left-width: 3px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: 14px;
+  }
+  .note b { color: var(--bright); font-weight: 500; }
+
+  /* ---------- scale ---------- */
+
+  .scale { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 12px 5px 8px; border-radius: 100px;
+    background: var(--surface); border: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+
+  /* ---------- footer ---------- */
+
+  footer {
+    padding: 34px 0 60px;
+    border-top: 1px solid var(--line);
+    font-size: 13.5px; color: var(--dim);
+  }
+  footer p { margin: 0 0 9px; }
+
+  @media (max-width: 560px) {
+    header { padding: 48px 0 40px; }
+    .actions { flex-direction: column; align-items: stretch; }
+    .btn { justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <img src="../icons/icon-128.png" alt="">
+      <span>CHROME EXTENSION</span>
+    </div>
+    <h1>See which episodes<br>are the good ones.</h1>
+    <p class="tagline">
+      AniList tells you how good an anime is. It doesn't tell you <b>which episodes</b>
+      are worth it. This adds a rating chart to every anime page, so a season's shape is
+      obvious before you start it.
+    </p>
+    <div class="actions">
+      <a class="btn btn-main"
+         href="https://github.com/anas1412/series-graph-for-anilist/releases/latest/download/episode-ratings-for-anilist.zip">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <path d="M8 1v8.5M8 9.5 4.75 6.25M8 9.5l3.25-3.25" stroke="currentColor" stroke-width="1.7"
+                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <path d="M2 11.5v1.75A1.25 1.25 0 0 0 3.25 14.5h9.5A1.25 1.25 0 0 0 14 13.25V11.5"
+                stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"/>
+        </svg>
+        Download latest
+      </a>
+      <a class="btn btn-ghost" href="#install">How to install</a>
+      <a class="btn btn-ghost" href="https://github.com/anas1412/series-graph-for-anilist">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+                   0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01
+                   1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95
+                   0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 2-.27c.68 0
+                   1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87
+                   3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16
+                   8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        Source on GitHub
+      </a>
+    </div>
+    <p class="meta">Free and open source · No account · Works in Chrome, Edge, Brave, Opera, Vivaldi</p>
+  </div>
+</header>
+
+<div class="shot">
+  <div class="wrap">
+    <img src="hero.png"
+         alt="An AniList anime page with an Episode Ratings chart added above the Relations section, plotting each episode's score across the season.">
+    <p class="caption">Frieren, season one — the chart sits above Relations and follows your AniList theme.</p>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <h2>What it does</h2>
+    <h3>Ratings for every episode, in context</h3>
+    <div class="scale">
+      <span class="chip"><span class="dot" style="background:var(--deep)"></span> 9.2+</span>
+      <span class="chip"><span class="dot" style="background:var(--green)"></span> 8.5</span>
+      <span class="chip"><span class="dot" style="background:var(--yellow)"></span> 7.8</span>
+      <span class="chip"><span class="dot" style="background:var(--orange)"></span> 7.0</span>
+      <span class="chip"><span class="dot" style="background:var(--red)"></span> under 5.5</span>
+    </div>
+    <div class="features">
+      <div class="feature">
+        <b>Two rating sources</b>
+        <p>Switch between IMDb ratings and Series Graph's own community scores.</p>
+      </div>
+      <div class="feature">
+        <b>Hover any episode</b>
+        <p>Its title, score, vote count and air date.</p>
+      </div>
+      <div class="feature">
+        <b>Season at a glance</b>
+        <p>Average, best episode and worst episode under every chart.</p>
+      </div>
+      <div class="feature">
+        <b>Matches your theme</b>
+        <p>Light, dark and high contrast, picked up from AniList itself.</p>
+      </div>
+      <div class="feature">
+        <b>Finds the right season</b>
+        <p>AniList splits a show into one page per cour. This works out which season each page means — correct on all 134 multi-season shows in AniList's 200 most popular.</p>
+      </div>
+      <div class="feature">
+        <b>Quiet when unsure</b>
+        <p>No data, or no confident season match? Nothing appears. No empty boxes, no error banners.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install</h2>
+    <h3>About a minute, no account needed</h3>
+    <ol class="steps">
+      <li>
+        <b>Download the zip</b>
+        <p>
+          <a href="https://github.com/anas1412/series-graph-for-anilist/releases/latest/download/episode-ratings-for-anilist.zip">episode-ratings-for-anilist.zip</a>
+          — always the latest release, about 65&nbsp;KB.
+        </p>
+      </li>
+      <li>
+        <b>Unzip it somewhere permanent</b>
+        <p>Chrome loads the extension from that folder every time it starts, so it has to stay put. Your Documents folder is fine; your Downloads folder is not.</p>
+      </li>
+      <li>
+        <b>Open <code>chrome://extensions</code></b>
+        <p>Paste that into the address bar. On Edge it is <code>edge://extensions</code>.</p>
+      </li>
+      <li>
+        <b>Turn on <kbd>Developer mode</kbd></b>
+        <p>Toggle in the top-right corner of that page.</p>
+      </li>
+      <li>
+        <b>Click <kbd>Load unpacked</kbd> and pick the folder</b>
+        <p>Select the folder you unzipped — the one containing <code>manifest.json</code>.</p>
+      </li>
+      <li>
+        <b>Open any anime on AniList</b>
+        <p>The chart appears at the top of the Overview column, above Relations.</p>
+      </li>
+    </ol>
+    <div class="note">
+      <b>Dragging the zip onto the extensions page won't work.</b> Chrome only accepts
+      packed <code>.crx</code> files that way. Unzip it first, then use Load unpacked.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Updating</h2>
+    <h3>Replace the folder, hit refresh</h3>
+    <p style="margin:0 0 18px">
+      Download the new zip, replace the contents of the folder you loaded, then click the
+      refresh icon on the extension's card in <code>chrome://extensions</code>.
+    </p>
+    <h2 style="margin-top:38px">Or build it yourself</h2>
+    <pre><code>git clone https://github.com/anas1412/series-graph-for-anilist
+cd series-graph-for-anilist
+node scripts/package.mjs</code></pre>
+    <p style="margin:16px 0 0">
+      Or skip the zip and <b style="color:var(--bright);font-weight:500">Load unpacked</b>
+      straight from the cloned folder. There is no build step — plain ES modules and one
+      content script.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>
+      Ratings and episode data from <a href="https://seriesgraph.com">Series Graph</a>, which
+      draws on IMDb and its own users. ID mapping from
+      <a href="https://github.com/Fribb/anime-lists">Fribb/anime-lists</a>. Episode counts
+      and air dates from the <a href="https://anilist.gitbook.io/anilist-apiv2-docs/">AniList API</a>.
+    </p>
+    <p>
+      Not affiliated with Series Graph, AniList, IMDb or TMDB. Collects no data about you —
+      it sends an anime ID and a show ID, both taken from the page URL, and nothing else.
+    </p>
+    <p><a href="https://github.com/anas1412/series-graph-for-anilist">Source and issues on GitHub</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
